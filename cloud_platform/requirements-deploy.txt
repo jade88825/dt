@@ -1,6 +1,7 @@
-# Render.com CPU部署依赖 (无CUDA)
-torch==2.6.0
-torchvision==0.21.0
+# Render.com CPU部署依赖
+# 不指定torch版本, 让pip自动选择可用版本
+torch
+torchvision
 ultralytics>=8.4.0
 flask>=3.0.0
 opencv-python-headless
