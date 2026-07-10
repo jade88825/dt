@@ -1,0 +1,9 @@
+# Render.com CPU部署依赖 (无CUDA)
+torch==2.6.0
+torchvision==0.21.0
+ultralytics>=8.4.0
+flask>=3.0.0
+opencv-python-headless
+numpy
+pillow
+gunicorn

@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}交通分析 - 智慧交通云平台{% endblock %}
+{% block page_title %}交通分析{% endblock %}
+
+{% block content %}
+<!-- 分析控制栏 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>批量交通检测分析</h2>
+        <span class="badge" id="status-badge">就绪</span>
+    </div>
+    <div class="card-body">
+        <div class="analysis-controls">
+            <div class="control-group">
+                <label>检测图片数量</label>
+                <div class="slider-row">
+                    <input type="range" id="count-slider" min="5" max="20" value="10" class="slider">
+                    <span class="slider-value" id="count-value">10</span>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>置信度阈值</label>
+                <div class="slider-row">
+                    <input type="range" id="conf-slider" min="0.1" max="0.9" step="0.05" value="0.25" class="slider">
+                    <span class="slider-value" id="conf-value">0.25</span>
+                </div>
+            </div>
+            <button id="run-analysis-btn" class="btn-primary btn-large">
+                <span>🚀 开始分析</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 统计概览 -->
+<div class="metrics-grid" id="summary-cards" style="display:none;">
+    <div class="metric-card">
+        <div class="metric-icon">📸</div>
+        <div class="metric-value" id="total-images">0</div>
+        <div class="metric-label">检测图片数</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🚗</div>
+        <div class="metric-value" id="total-vehicles">0</div>
+        <div class="metric-label">车辆总数</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🚶</div>
+        <div class="metric-value" id="total-pedestrians">0</div>
+        <div class="metric-label">行人总数</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-value" id="avg-vehicles">0</div>
+        <div class="metric-label">平均车辆/张</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">📈</div>
+        <div class="metric-value" id="avg-pedestrians">0</div>
+        <div class="metric-label">平均行人/张</div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="dual-column" id="chart-area" style="display:none;">
+    <div class="card">
+        <div class="card-header"><h2>车辆/行人分布</h2></div>
+        <div class="card-body">
+            <canvas id="chart-distribution" height="260"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>拥堵等级分布</h2></div>
+        <div class="card-body">
+            <canvas id="chart-congestion" height="260"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- 拥堵等级概览 -->
+<div class="card full-width" id="congestion-overview" style="display:none;">
+    <div class="card-header"><h2>道路拥堵态势</h2></div>
+    <div class="card-body">
+        <div class="congestion-bars" id="congestion-bars"></div>
+    </div>
+</div>
+
+<!-- 详细结果列表 -->
+<div class="card full-width" id="detail-list" style="display:none;">
+    <div class="card-header">
+        <h2>逐图检测结果</h2>
+    </div>
+    <div class="card-body" style="padding:0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>图片</th>
+                    <th>车辆</th>
+                    <th>行人</th>
+                    <th>总计</th>
+                    <th>拥堵等级</th>
+                    <th>推理耗时</th>
+                </tr>
+            </thead>
+            <tbody id="detail-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 加载状态 -->
+<div class="card full-width" id="analysis-loading" style="display:none;">
+    <div class="card-body">
+        <div class="detect-loading">
+            <div class="spinner"></div>
+            <p id="loading-text">正在加载模型并检测中...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 初始占位 -->
+<div class="card full-width" id="analysis-placeholder">
+    <div class="card-body">
+        <div class="detect-placeholder">
+            <div class="placeholder-icon">🚦</div>
+            <p>设置参数后点击"开始分析"，系统将对多张KITTI验证集图片进行批量检测</p>
+            <p style="font-size:13px;margin-top:4px;">统计车流量、行人数量、拥堵等级分布等交通指标</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const countSlider = document.getElementById('count-slider');
+const confSlider = document.getElementById('conf-slider');
+const runBtn = document.getElementById('run-analysis-btn');
+
+countSlider.addEventListener('input', e => document.getElementById('count-value').textContent = e.target.value);
+confSlider.addEventListener('input', e => document.getElementById('conf-value').textContent = e.target.value);
+
+let distChart = null;
+let congChart = null;
+
+runBtn.addEventListener('click', async () => {
+    const count = parseInt(countSlider.value);
+    const conf = parseFloat(confSlider.value);
+
+    // UI切换
+    document.getElementById('analysis-placeholder').style.display = 'none';
+    document.getElementById('summary-cards').style.display = 'none';
+    document.getElementById('chart-area').style.display = 'none';
+    document.getElementById('congestion-overview').style.display = 'none';
+    document.getElementById('detail-list').style.display = 'none';
+    document.getElementById('analysis-loading').style.display = 'block';
+    document.getElementById('status-badge').textContent = '分析中...';
+    document.getElementById('progress-bar').style.width = '0%';
+    runBtn.disabled = true;
+
+    try {
+        const response = await fetch('/api/batch_detect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ count, conf, iou: 0.45 })
+        });
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error);
+
+        document.getElementById('analysis-loading').style.display = 'none';
+
+        // 填充概览卡片
+        const s = data.summary;
+        document.getElementById('total-images').textContent = s.total_images;
+        document.getElementById('total-vehicles').textContent = s.total_vehicles;
+        document.getElementById('total-pedestrians').textContent = s.total_pedestrians;
+        document.getElementById('avg-vehicles').textContent = s.avg_vehicles;
+        document.getElementById('avg-pedestrians').textContent = s.avg_pedestrians;
+        document.getElementById('summary-cards').style.display = 'grid';
+
+        // 图表
+        document.getElementById('chart-area').style.display = 'grid';
+        renderDistributionChart(data.results);
+        renderCongestionChart(s.congestion_distribution);
+
+        // 拥堵态势条
+        document.getElementById('congestion-overview').style.display = 'block';
+        renderCongestionBars(s.congestion_distribution, s.total_images);
+
+        // 详细列表
+        document.getElementById('detail-list').style.display = 'block';
+        renderDetailTable(data.results);
+
+        document.getElementById('status-badge').textContent = '完成';
+    } catch (err) {
+        document.getElementById('analysis-loading').style.display = 'none';
+        document.getElementById('analysis-placeholder').style.display = 'block';
+        document.getElementById('analysis-placeholder').innerHTML =
+            `<div class="detect-placeholder"><p style="color:#ef4444;">分析失败: ${err.message}</p></div>`;
+        document.getElementById('status-badge').textContent = '错误';
+    } finally {
+        runBtn.disabled = false;
+    }
+});
+
+function renderDistributionChart(results) {
+    if (distChart) distChart.destroy();
+    const labels = results.map(r => r.image.substring(0, 8));
+    distChart = new Chart(document.getElementById('chart-distribution').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: '车辆', data: results.map(r => r.vehicles), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 },
+                { label: '行人', data: results.map(r => r.pedestrians), backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 6 },
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+}
+
+function renderCongestionChart(dist) {
+    if (congChart) congChart.destroy();
+    const colors = ['#34d399', '#fbbf24', '#f97316', '#f87171'];
+    congChart = new Chart(document.getElementById('chart-congestion').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(dist),
+            datasets: [{
+                data: Object.values(dist),
+                backgroundColor: colors,
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { padding: 12 } } }
+        }
+    });
+}
+
+function renderCongestionBars(dist, total) {
+    const colors = { '畅通': '#34d399', '轻度拥堵': '#fbbf24', '中度拥堵': '#f97316', '严重拥堵': '#f87171' };
+    const html = Object.entries(dist).map(([label, count]) => {
+        const pct = total > 0 ? (count / total * 100) : 0;
+        return `
+            <div class="congestion-bar-item">
+                <div class="congestion-bar-label">
+                    <span class="congestion-dot" style="background:${colors[label]}"></span>
+                    <span>${label}</span>
+                    <span class="congestion-count">${count} 张 (${pct.toFixed(0)}%)</span>
+                </div>
+                <div class="congestion-bar-track">
+                    <div class="congestion-bar-fill" style="width:${pct}%;background:${colors[label]}"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    document.getElementById('congestion-bars').innerHTML = html;
+}
+
+function renderDetailTable(results) {
+    const colorMap = { '畅通': '#34d399', '轻度拥堵': '#fbbf24', '中度拥堵': '#f97316', '严重拥堵': '#f87171' };
+    const html = results.map(r => `
+        <tr>
+            <td style="font-family:monospace;font-size:12px;">${r.image}</td>
+            <td><span style="color:#6366f1;font-weight:600;">${r.vehicles}</span></td>
+            <td><span style="color:#a78bfa;font-weight:600;">${r.pedestrians}</span></td>
+            <td>${r.total}</td>
+            <td><span class="congestion-tag" style="background:${colorMap[r.congestion]}20;color:${colorMap[r.congestion]};">${r.congestion}</span></td>
+            <td style="color:var(--text-muted);">${r.inference_time}ms</td>
+        </tr>
+    `).join('');
+    document.getElementById('detail-tbody').innerHTML = html;
+}
+</script>
+{% endblock %}

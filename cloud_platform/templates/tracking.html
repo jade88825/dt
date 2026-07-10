@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}目标跟踪 - 智慧交通云平台{% endblock %}
+{% block page_title %}目标跟踪{% endblock %}
+
+{% block content %}
+<!-- 跟踪流程 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>多目标跟踪流程</h2>
+    </div>
+    <div class="card-body">
+        <div class="pipeline">
+            <div class="pipeline-step">
+                <div class="pipeline-icon">📦</div>
+                <div class="pipeline-title">YOLOv8s 检测</div>
+                <div class="pipeline-desc">检测画面中的车辆与行人<br>91.3% mAP@0.5</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon">🧩</div>
+                <div class="pipeline-title">MobileNetV3 Re-ID</div>
+                <div class="pipeline-desc">提取每个目标特征向量<br>683K参数, 576维嵌入, 74.5 FPS</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon">🔗</div>
+                <div class="pipeline-title">BoT-SORT 跟踪</div>
+                <div class="pipeline-desc">基于检测结果+Re-ID特征<br>311个唯一ID, 16.2 FPS</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="pipeline-icon">📊</div>
+                <div class="pipeline-title">输出结果</div>
+                <div class="pipeline-desc">带跟踪ID标注的<br>视频/图像</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 跟踪统计 -->
+<div class="metrics-grid">
+    <div class="metric-card highlight">
+        <div class="metric-icon">🎬</div>
+        <div class="metric-value">1,496</div>
+        <div class="metric-label">处理帧数</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">📦</div>
+        <div class="metric-value">7,805</div>
+        <div class="metric-label">检测目标</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value">311</div>
+        <div class="metric-label">唯一跟踪ID</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">📈</div>
+        <div class="metric-value">780</div>
+        <div class="metric-label">跟踪轨迹</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-value">16.2</div>
+        <div class="metric-label">综合FPS</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🧩</div>
+        <div class="metric-value">74.5</div>
+        <div class="metric-label">Re-ID FPS</div>
+    </div>
+</div>
+
+<!-- 原始视频 vs 跟踪视频 对比 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>🎬 视频对比: 原始视频 vs 模型检测跟踪视频</h2>
+    </div>
+    <div class="card-body">
+        <div class="dual-column">
+            <div>
+                <h3 style="text-align:center;margin-bottom:0.5rem;">📹 原始交通视频</h3>
+                {% if original_exists %}
+                <video controls muted loop style="width:100%;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+                    <source src="{{ url_for('original_video') }}" type="video/mp4">
+                    您的浏览器不支持视频播放。
+                </video>
+                {% else %}
+                <p style="text-align:center;color:var(--text-muted);padding:2rem;">原始视频未找到</p>
+                {% endif %}
+            </div>
+            <div>
+                <h3 style="text-align:center;margin-bottom:0.5rem;">🎯 YOLOv8+MobileNetV3+BoT-SORT 检测跟踪视频</h3>
+                {% if track_exists %}
+                <video controls autoplay muted loop style="width:100%;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+                    <source src="{{ url_for('track_video') }}" type="video/mp4">
+                    您的浏览器不支持视频播放。
+                </video>
+                {% else %}
+                <p style="text-align:center;color:var(--text-muted);padding:2rem;">跟踪视频未找到</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 技术细节 -->
+<div class="dual-column">
+    <div class="card">
+        <div class="card-header"><h2>MobileNetV3 Re-ID 模型</h2></div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr><td>架构</td><td>MobileNetV3-Small</td></tr>
+                <tr><td>注意力机制</td><td>SE (Squeeze-and-Excitation)</td></tr>
+                <tr><td>激活函数</td><td>H-Swish</td></tr>
+                <tr><td>特征维度</td><td>576</td></tr>
+                <tr><td>参数量</td><td>683K (比MobileNetV2少3倍)</td></tr>
+                <tr><td>训练数据</td><td>KITTI Re-ID 数据集</td></tr>
+                <tr><td>损失函数</td><td>Triplet Loss + Cross-Entropy</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>BoT-SORT 跟踪器配置</h2></div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr><td>跟踪算法</td><td>BoT-SORT</td></tr>
+                <tr><td>检测置信度阈值</td><td>0.25</td></tr>
+                <tr><td>NMS IoU 阈值</td><td>0.45</td></tr>
+                <tr><td>按类别跟踪</td><td>是 (per_class)</td></tr>
+                <tr><td>输入尺寸</td><td>640 × 640</td></tr>
+                <tr><td>设备</td><td>GPU (CUDA)</td></tr>
+                <tr><td>检测FPS</td><td>48.6</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 检测与跟踪效果 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>检测与跟踪效果</h2>
+    </div>
+    <div class="card-body">
+        <div class="preview-grid">
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch0_pred.jpg') }}" alt="检测结果">
+                <span class="preview-label">YOLOv8s 车辆/行人检测</span>
+            </div>
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch1_pred.jpg') }}" alt="检测结果">
+                <span class="preview-label">密集场景检测</span>
+            </div>
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch2_pred.jpg') }}" alt="检测结果">
+                <span class="preview-label">遮挡场景检测</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 应用场景 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>应用场景</h2>
+    </div>
+    <div class="card-body">
+        <div class="scenario-grid">
+            <div class="scenario-item">
+                <div class="scenario-icon">🛣️</div>
+                <h3>城市主干道</h3>
+                <p>实时监测车流量，动态调整信号灯配时</p>
+            </div>
+            <div class="scenario-item">
+                <div class="scenario-icon">🏫</div>
+                <h3>学校周边</h3>
+                <p>保护行人安全，识别违规行驶</p>
+            </div>
+            <div class="scenario-item">
+                <div class="scenario-icon">🏥</div>
+                <h3>医院区域</h3>
+                <p>保障急救通道畅通，监测拥堵</p>
+            </div>
+            <div class="scenario-item">
+                <div class="scenario-icon">🏬</div>
+                <h3>商圈周边</h3>
+                <p>分析人流车流，优化交通组织</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+# Cloudflare Pages 部署配置
+# 注意: Cloudflare Pages 只支持静态网站
+# 需要使用 Cloudflare Workers 配合部署 Flask 应用
+
+name = "smart-traffic-platform"
+compatibility_date = "2024-12-01"
+pages_build_output_dir = "static"
+
+[vars]
+FLASK_ENV = "production"

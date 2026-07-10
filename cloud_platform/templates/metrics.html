@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}训练指标 - 智慧交通云平台{% endblock %}
+{% block page_title %}训练指标分析{% endblock %}
+
+{% block content %}
+<!-- 最终指标卡片 -->
+<div class="metrics-grid">
+    <div class="metric-card highlight">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value">{{ '%.2f'|format(final_metrics.mAP50 * 100) }}%</div>
+        <div class="metric-label">mAP@0.5 (最终)</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">📐</div>
+        <div class="metric-value">{{ '%.2f'|format(final_metrics.mAP50_95 * 100) }}%</div>
+        <div class="metric-label">mAP@0.5:0.95 (最终)</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">✅</div>
+        <div class="metric-value">{{ '%.2f'|format(final_metrics.precision * 100) }}%</div>
+        <div class="metric-label">Precision (最终)</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">🔁</div>
+        <div class="metric-value">{{ '%.2f'|format(final_metrics.recall * 100) }}%</div>
+        <div class="metric-label">Recall (最终)</div>
+    </div>
+</div>
+
+<!-- 训练曲线图表 -->
+<div class="dual-column">
+    <div class="card">
+        <div class="card-header"><h2>mAP 指标变化曲线</h2></div>
+        <div class="card-body">
+            <canvas id="chart-map" height="260"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>Precision / Recall 曲线</h2></div>
+        <div class="card-body">
+            <canvas id="chart-pr" height="260"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="dual-column">
+    <div class="card">
+        <div class="card-header"><h2>训练损失变化</h2></div>
+        <div class="card-body">
+            <canvas id="chart-loss" height="260"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>实验对比雷达图</h2></div>
+        <div class="card-body">
+            <canvas id="chart-radar" height="260"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="card full-width">
+    <div class="card-header"><h2>实验对比明细</h2></div>
+    <div class="card-body" style="padding:0;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>实验</th>
+                    <th>Epoch</th>
+                    <th>mAP50</th>
+                    <th>mAP50-95</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exp in comparison %}
+                <tr>
+                    <td>{{ exp.name }}</td>
+                    <td>{{ exp.epoch }}</td>
+                    <td>{{ '%.1f'|format(exp.mAP50 * 100) }}%</td>
+                    <td>{{ '%.1f'|format(exp.mAP50_95 * 100) }}%</td>
+                    <td>{{ '%.1f'|format(exp.precision * 100) }}%</td>
+                    <td>{{ '%.1f'|format(exp.recall * 100) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- YOLO原始评估图表 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>YOLO评估图表</h2>
+    </div>
+    <div class="card-body">
+        <div class="gallery-grid">
+            {% for img in curve_images %}
+            <div class="gallery-item">
+                <img src="{{ url_for('runs_image', filename=img) }}" alt="{{ img }}" loading="lazy"
+                     onclick="openLightbox(this.src)">
+                <div class="gallery-caption">{{ img }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chartData = {{ chart_data | tojson }};
+const ctx = (id) => document.getElementById(id).getContext('2d');
+
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(99,102,241,0.1)';
+
+// mAP曲线
+new Chart(ctx('chart-map'), {
+    type: 'line',
+    data: {
+        labels: chartData.epochs,
+        datasets: [
+            { label: 'mAP@0.5', data: chartData.mAP50, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', fill: true, tension: 0.3, borderWidth: 2 },
+            { label: 'mAP@0.5:0.95', data: chartData.mAP50_95, borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.08)', fill: true, tension: 0.3, borderWidth: 2 },
+        ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => (v*100).toFixed(0)+'%' } } } }
+});
+
+// P/R曲线
+new Chart(ctx('chart-pr'), {
+    type: 'line',
+    data: {
+        labels: chartData.epochs,
+        datasets: [
+            { label: 'Precision', data: chartData.precision, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.08)', fill: true, tension: 0.3, borderWidth: 2 },
+            { label: 'Recall', data: chartData.recall, borderColor: '#f472b6', backgroundColor: 'rgba(244,114,182,0.08)', fill: true, tension: 0.3, borderWidth: 2 },
+        ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => (v*100).toFixed(0)+'%' } } } }
+});
+
+// 损失曲线
+new Chart(ctx('chart-loss'), {
+    type: 'line',
+    data: {
+        labels: chartData.epochs,
+        datasets: [
+            { label: 'Box Loss', data: chartData.box_loss, borderColor: '#818cf8', tension: 0.3, borderWidth: 2 },
+            { label: 'Cls Loss', data: chartData.cls_loss, borderColor: '#c4b5fd', tension: 0.3, borderWidth: 2 },
+        ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true } } }
+});
+
+// 实验对比雷达图
+const compData = {{ comparison | tojson }};
+new Chart(ctx('chart-radar'), {
+    type: 'radar',
+    data: {
+        labels: ['mAP@0.5', 'mAP@0.5:0.95', 'Precision', 'Recall'],
+        datasets: compData.map((exp, i) => ({
+            label: exp.name,
+            data: [exp.mAP50 * 100, exp.mAP50_95 * 100, exp.precision * 100, exp.recall * 100],
+            borderColor: ['#6366f1', '#a78bfa'][i % 2],
+            backgroundColor: ['rgba(99,102,241,0.1)', 'rgba(167,139,250,0.1)'][i % 2],
+            borderWidth: 2,
+            pointRadius: 4,
+        }))
+    },
+    options: {
+        responsive: true,
+        scales: {
+            r: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: v => v + '%', backdropColor: 'rgba(255,255,255,0.5)' },
+                grid: { color: 'rgba(99,102,241,0.1)' },
+                angleLines: { color: 'rgba(99,102,241,0.1)' },
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

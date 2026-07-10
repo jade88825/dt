@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}检测结果 - 智慧交通云平台{% endblock %}
+{% block page_title %}检测结果展示{% endblock %}
+
+{% block content %}
+<div class="card full-width" data-tab-group="detection">
+    <div class="card-header">
+        <h2>🎯 检测结果画廊</h2>
+        <span class="badge">{{ pred_images|length + label_images|length + train_images|length }} 张</span>
+    </div>
+    <div class="card-body">
+        <!-- 标签页导航 -->
+        <div class="tabs">
+            <button class="tab active" data-tab="pred" onclick="switchTab('pred', 'detection')">
+                🎯 预测结果 ({{ pred_images|length }})
+            </button>
+            <button class="tab" data-tab="labels" onclick="switchTab('labels', 'detection')">
+                📋 标签对比 ({{ label_images|length }})
+            </button>
+            <button class="tab" data-tab="train" onclick="switchTab('train', 'detection')">
+                🖼️ 训练批次 ({{ train_images|length }})
+            </button>
+        </div>
+
+        <!-- 预测结果 -->
+        <div class="tab-content active" data-content="pred">
+            <div class="gallery-grid">
+                {% for img in pred_images %}
+                <div class="gallery-item">
+                    <img src="{{ url_for('runs_image', filename=img) }}" alt="{{ img }}" loading="lazy"
+                         onclick="openLightbox(this.src)">
+                    <div class="gallery-caption">{{ img }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 标签对比 -->
+        <div class="tab-content" data-content="labels">
+            <div class="gallery-grid">
+                {% for img in label_images %}
+                <div class="gallery-item">
+                    <img src="{{ url_for('runs_image', filename=img) }}" alt="{{ img }}" loading="lazy"
+                         onclick="openLightbox(this.src)">
+                    <div class="gallery-caption">{{ img }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 训练批次 -->
+        <div class="tab-content" data-content="train">
+            <div class="gallery-grid">
+                {% for img in train_images %}
+                <div class="gallery-item">
+                    <img src="{{ url_for('runs_image', filename=img) }}" alt="{{ img }}" loading="lazy"
+                         onclick="openLightbox(this.src)">
+                    <div class="gallery-caption">{{ img }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 灯箱 -->
+<div id="lightbox" class="lightbox" onclick="closeLightbox()">
+    <img id="lightbox-img" src="" alt="放大查看">
+</div>
+{% endblock %}

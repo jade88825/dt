@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}实时检测 - 智慧交通云平台{% endblock %}
+{% block page_title %}实时检测{% endblock %}
+
+{% block content %}
+<div class="detect-layout">
+    <!-- 左侧：上传/选择 -->
+    <div class="card detect-left">
+        <div class="card-header">
+            <h2>选择检测图片</h2>
+        </div>
+        <div class="card-body">
+            <!-- 上传/摄像头切换 -->
+            <div class="upload-buttons">
+                <button class="upload-btn active" id="btn-upload" onclick="switchInput('upload')">📁 上传图片</button>
+                <button class="upload-btn" id="btn-webcam" onclick="switchInput('webcam')">📷 摄像头拍照</button>
+            </div>
+
+            <!-- 上传区域 -->
+            <div class="upload-zone" id="upload-zone">
+                <div class="upload-icon">📁</div>
+                <p>点击或拖拽图片到此处</p>
+                <input type="file" id="file-input" accept="image/*" hidden>
+            </div>
+
+            <!-- 摄像头区域 -->
+            <div id="webcam-zone" style="display:none;">
+                <video id="webcam-video" autoplay style="width:100%;border-radius:var(--radius-sm);border:1px solid var(--border-color);"></video>
+                <button class="btn-primary" id="webcam-capture" style="width:100%;margin-top:8px;">📸 拍照检测</button>
+                <canvas id="webcam-canvas" style="display:none;"></canvas>
+            </div>
+
+            <!-- 检测参数 -->
+            <div class="detect-params">
+                <h3>检测参数</h3>
+                <div class="param-row">
+                    <label>置信度阈值</label>
+                    <div class="slider-row">
+                        <input type="range" id="conf-slider" min="0.1" max="0.9" step="0.05" value="0.25" class="slider">
+                        <span class="slider-value" id="conf-display">0.25</span>
+                    </div>
+                </div>
+                <div class="param-row">
+                    <label>IoU 阈值 (NMS)</label>
+                    <div class="slider-row">
+                        <input type="range" id="iou-slider" min="0.3" max="0.8" step="0.05" value="0.45" class="slider">
+                        <span class="slider-value" id="iou-display">0.45</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KITTI样本 -->
+            <div class="sample-section">
+                <h3>或选择KITTI样本图片</h3>
+                <div class="sample-grid">
+                    {% for img in sample_images %}
+                    <div class="sample-item" onclick="detectSample('{{ img }}')">
+                        <img src="{{ url_for('kitti_image', filename=img) }}" alt="{{ img }}" loading="lazy">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：检测结果 -->
+    <div class="card detect-right">
+        <div class="card-header">
+            <h2>检测结果</h2>
+            <div class="detect-actions">
+                <button id="download-btn" class="btn-secondary" style="display:none;">⬇ 下载结果</button>
+                <button id="detect-btn" class="btn-primary" disabled>开始检测</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- 等待状态 -->
+            <div class="detect-placeholder" id="detect-placeholder">
+                <div class="placeholder-icon">🔍</div>
+                <p>请选择或上传图片后点击"开始检测"</p>
+            </div>
+
+            <!-- 加载状态 -->
+            <div class="detect-loading" id="detect-loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>正在检测中...</p>
+            </div>
+
+            <!-- 结果展示 -->
+            <div class="detect-result" id="detect-result" style="display:none;">
+                <img id="result-image" src="" alt="检测结果">
+                <div class="result-stats" id="result-stats"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedFile = null;
+let selectedSample = null;
+let lastResultImage = null;
+let webcamStream = null;
+let inputMode = 'upload';
+
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+const detectBtn = document.getElementById('detect-btn');
+const confSlider = document.getElementById('conf-slider');
+const iouSlider = document.getElementById('iou-slider');
+
+confSlider.addEventListener('input', e => document.getElementById('conf-display').textContent = e.target.value);
+iouSlider.addEventListener('input', e => document.getElementById('iou-display').textContent = e.target.value);
+
+// 输入模式切换
+function switchInput(mode) {
+    inputMode = mode;
+    document.getElementById('btn-upload').classList.toggle('active', mode === 'upload');
+    document.getElementById('btn-webcam').classList.toggle('active', mode === 'webcam');
+    document.getElementById('upload-zone').style.display = mode === 'upload' ? 'block' : 'none';
+    document.getElementById('webcam-zone').style.display = mode === 'webcam' ? 'block' : 'none';
+    if (mode === 'webcam') startWebcam();
+    else stopWebcam();
+}
+
+// 摄像头
+async function startWebcam() {
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        document.getElementById('webcam-video').srcObject = webcamStream;
+    } catch (err) {
+        alert('无法访问摄像头: ' + err.message);
+        switchInput('upload');
+    }
+}
+
+function stopWebcam() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(t => t.stop());
+        webcamStream = null;
+    }
+}
+
+document.getElementById('webcam-capture').addEventListener('click', () => {
+    const video = document.getElementById('webcam-video');
+    const canvas = document.getElementById('webcam-canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(blob => {
+        selectedFile = new File([blob], 'webcam_capture.jpg', { type: 'image/jpeg' });
+        selectedSample = null;
+        detectBtn.disabled = false;
+        showPreview(URL.createObjectURL(blob));
+    }, 'image/jpeg', 0.9);
+});
+
+// 上传
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+    selectedFile = file;
+    selectedSample = null;
+    detectBtn.disabled = false;
+    const reader = new FileReader();
+    reader.onload = e => showPreview(e.target.result);
+    reader.readAsDataURL(file);
+}
+
+function detectSample(imgName) {
+    selectedSample = imgName;
+    selectedFile = null;
+    detectBtn.disabled = false;
+    document.querySelectorAll('.sample-item').forEach(el => el.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    fetch('/kitti_img/' + imgName)
+        .then(r => r.blob())
+        .then(b => {
+            const reader = new FileReader();
+            reader.onload = e => showPreview(e.target.result);
+            reader.readAsDataURL(b);
+        });
+}
+
+function showPreview(src) {
+    const ph = document.getElementById('detect-placeholder');
+    ph.innerHTML = `<img src="${src}" alt="预览" style="max-width:100%;border-radius:8px;"><p style="margin-top:8px;">已选择图片，点击"开始检测"</p>`;
+    document.getElementById('download-btn').style.display = 'none';
+    document.getElementById('detect-result').style.display = 'none';
+    document.getElementById('detect-placeholder').style.display = 'block';
+}
+
+detectBtn.addEventListener('click', async () => {
+    if (!selectedFile && !selectedSample) return;
+
+    const conf = parseFloat(confSlider.value);
+    const iou = parseFloat(iouSlider.value);
+
+    document.getElementById('detect-placeholder').style.display = 'none';
+    document.getElementById('detect-result').style.display = 'none';
+    document.getElementById('detect-loading').style.display = 'flex';
+    detectBtn.disabled = true;
+
+    try {
+        let response;
+        if (selectedFile) {
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('conf', conf);
+            formData.append('iou', iou);
+            response = await fetch('/api/detect', { method: 'POST', body: formData });
+        } else {
+            response = await fetch('/api/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sample: selectedSample, conf, iou })
+            });
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        document.getElementById('detect-loading').style.display = 'none';
+        document.getElementById('detect-result').style.display = 'block';
+        document.getElementById('result-image').src = data.image;
+        lastResultImage = data.image;
+        document.getElementById('download-btn').style.display = 'inline-block';
+
+        // 拥堵等级判定
+        let congLabel = '畅通', congClass = 'green';
+        if (data.vehicle_count >= 20) { congLabel = '严重拥堵'; congClass = 'red'; }
+        else if (data.vehicle_count >= 10) { congLabel = '中度拥堵'; congClass = 'orange'; }
+        else if (data.vehicle_count >= 5) { congLabel = '轻度拥堵'; congClass = 'yellow'; }
+
+        const counts = Object.entries(data.category_counts || data.class_counts)
+            .map(([k, v]) => `<span class="count-tag">${k}: <strong>${v}</strong></span>`).join('');
+        document.getElementById('result-stats').innerHTML = `
+            <div class="result-summary">
+                <div class="count-tags">${counts}</div>
+                <div class="total-detections">检测到 <strong>${data.total}</strong> 个目标</div>
+            </div>
+            <div class="inference-info">
+                <span class="info-chip">⏱ 推理耗时: <strong>${data.inference_time}ms</strong></span>
+                <span class="info-chip">🖼 来源: ${data.source}</span>
+                <span class="info-chip">🎯 置信度阈值: ${conf}</span>
+                <span class="traffic-light ${congClass}">🚦 ${congLabel} (${data.vehicle_count}辆)</span>
+            </div>
+            <div class="detection-list">
+                ${data.detections.slice(0, 30).map(d => `
+                    <div class="detection-row">
+                        <span class="det-cls">${d.class}</span>
+                        <span class="det-conf-bar">
+                            <span class="det-conf-text">${(d.confidence*100).toFixed(1)}%</span>
+                            <span class="det-conf-track"><span class="det-conf-fill" style="width:${d.confidence*100}%"></span></span>
+                        </span>
+                        <span class="det-bbox">[${d.bbox.join(', ')}]</span>
+                    </div>
+                `).join('')}
+                ${data.detections.length > 30 ? `<p style="text-align:center;color:#666;padding:8px;">...共 ${data.detections.length} 个检测结果</p>` : ''}
+            </div>
+        `;
+    } catch (err) {
+        document.getElementById('detect-loading').style.display = 'none';
+        document.getElementById('detect-placeholder').style.display = 'block';
+        document.getElementById('detect-placeholder').innerHTML = `<p style="color:#ef4444;">检测失败: ${err.message}</p>`;
+    } finally {
+        detectBtn.disabled = false;
+    }
+});
+
+document.getElementById('download-btn').addEventListener('click', () => {
+    if (!lastResultImage) return;
+    const a = document.createElement('a');
+    a.href = lastResultImage;
+    a.download = `detection_result_${Date.now()}.jpg`;
+    a.click();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="智慧交通云平台 - 基于YOLOv8的车辆检测与交通分析系统">
+    <title>{% block title %}智慧交通云平台{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚦</text></svg>">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- 漂浮渐变气泡背景 -->
+    <div class="bg-bubbles">
+        <div class="bg-bubble"></div>
+        <div class="bg-bubble"></div>
+        <div class="bg-bubble"></div>
+        <div class="bg-bubble"></div>
+    </div>
+
+    <!-- 移动端遮罩 -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app-layout">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">🚦</span>
+                    <span class="logo-text">智慧交通<br>云平台</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span>总览仪表盘</span>
+                </a>
+                <a href="{{ url_for('detection') }}" class="nav-item {% if request.endpoint == 'detection' %}active{% endif %}">
+                    <span class="nav-icon">🎯</span>
+                    <span>检测结果</span>
+                </a>
+                <a href="{{ url_for('metrics') }}" class="nav-item {% if request.endpoint == 'metrics' %}active{% endif %}">
+                    <span class="nav-icon">📈</span>
+                    <span>训练指标</span>
+                </a>
+                <a href="{{ url_for('detect') }}" class="nav-item {% if request.endpoint == 'detect' %}active{% endif %}">
+                    <span class="nav-icon">🔍</span>
+                    <span>实时检测</span>
+                </a>
+                <a href="{{ url_for('analysis') }}" class="nav-item {% if request.endpoint == 'analysis' %}active{% endif %}">
+                    <span class="nav-icon">🚦</span>
+                    <span>交通分析</span>
+                </a>
+                <a href="{{ url_for('tracking') }}" class="nav-item {% if request.endpoint == 'tracking' %}active{% endif %}">
+                    <span class="nav-icon">📦</span>
+                    <span>目标跟踪</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="tech-stack">
+                    <div class="tech-tag">YOLOv8s (2类)</div>
+                    <div class="tech-tag">MobileNetV3</div>
+                    <div class="tech-tag">BoT-SORT</div>
+                    <div class="tech-tag">CBAM对比</div>
+                    <div class="tech-tag">Flask</div>
+                </div>
+                <p class="copyright">第十三届大学生新一代信息通信科技大赛</p>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+                    <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
+                </div>
+                <div class="topbar-right">
+                    <div class="clock" id="live-clock">
+                        <span class="clock-icon">🕐</span>
+                        <span id="clock-time">--:--:--</span>
+                    </div>
+                    <span class="status-badge">
+                        <span class="status-dot"></span>
+                        系统运行中
+                    </span>
+                </div>
+            </header>
+            <div class="content-body">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

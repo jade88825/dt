@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+uploads/
+.codely/
+.codely-cli/
+*.log
+runs/detect/train*/
+runs/reid/
+dataset/kitti_reid/
+kitti/labels_8cls_backup/

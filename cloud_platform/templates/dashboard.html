@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}总览仪表盘 - 智慧交通云平台{% endblock %}
+{% block page_title %}总览仪表盘{% endblock %}
+
+{% block content %}
+<!-- Hero Banner -->
+<div class="hero-banner">
+    <div class="hero-content">
+        <div class="hero-title">🚦 智慧交通云平台</div>
+        <div class="hero-subtitle">基于 YOLOv8s (2类) + MobileNetV3 Re-ID + BoT-SORT 的车辆检测与多目标跟踪系统</div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-stat-value green">{{ '%.1f'|format(stats.mAP50 * 100) }}%</span>
+                <span class="hero-stat-label">mAP@0.5</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value blue">{{ stats.classes }}</span>
+                <span class="hero-stat-label">检测类别</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value blue">{{ stats.train_images + stats.val_images }}</span>
+                <span class="hero-stat-label">训练+验证图片</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value orange">{{ stats.epochs }}</span>
+                <span class="hero-stat-label">训练轮次</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value green">{{ '%.1f'|format(stats.precision * 100) }}%</span>
+                <span class="hero-stat-label">Precision</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value green">{{ '%.1f'|format(stats.recall * 100) }}%</span>
+                <span class="hero-stat-label">Recall</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 核心指标卡片 -->
+<div class="metrics-grid">
+    <div class="metric-card highlight">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value">{{ '%.2f'|format(stats.mAP50 * 100) }}%</div>
+        <div class="metric-label">mAP@0.5</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">📐</div>
+        <div class="metric-value">{{ '%.2f'|format(stats.mAP50_95 * 100) }}%</div>
+        <div class="metric-label">mAP@0.5:0.95</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">✅</div>
+        <div class="metric-value">{{ '%.2f'|format(stats.precision * 100) }}%</div>
+        <div class="metric-label">Precision</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">🔁</div>
+        <div class="metric-value">{{ '%.2f'|format(stats.recall * 100) }}%</div>
+        <div class="metric-label">Recall</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">📁</div>
+        <div class="metric-value">{{ stats.train_images + stats.val_images }}</div>
+        <div class="metric-label">训练+验证图片</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🏷️</div>
+        <div class="metric-value">{{ stats.classes }}</div>
+        <div class="metric-label">检测类别 (车辆+行人)</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🔄</div>
+        <div class="metric-value">{{ stats.epochs }}</div>
+        <div class="metric-label">训练轮次</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🧪</div>
+        <div class="metric-value">{{ stats.experiments }}</div>
+        <div class="metric-label">对比实验组数</div>
+    </div>
+</div>
+
+<!-- 跟踪统计卡片 -->
+<div class="metrics-grid">
+    <div class="metric-card highlight">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-value">{{ stats.track_stats.track_ids }}</div>
+        <div class="metric-label">唯一跟踪ID</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">📦</div>
+        <div class="metric-value">{{ stats.track_stats.detections }}</div>
+        <div class="metric-label">总检测目标</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-value">{{ stats.track_stats.fps }}</div>
+        <div class="metric-label">综合FPS</div>
+    </div>
+    <div class="metric-card highlight">
+        <div class="metric-icon">🧩</div>
+        <div class="metric-value">{{ stats.track_stats.reid_fps }}</div>
+        <div class="metric-label">Re-ID FPS</div>
+    </div>
+</div>
+
+<!-- 系统架构图 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>🌐 系统逻辑架构 (云-边-端)</h2>
+    </div>
+    <div class="card-body">
+        <div class="architecture-diagram">
+            <div class="arch-layer">
+                <div class="arch-layer-icon">📷</div>
+                <div class="arch-layer-content">
+                    <div class="arch-layer-title">感知层</div>
+                    <div class="arch-layer-desc">视频采集 - 道路摄像头实时采集交通画面</div>
+                </div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-layer">
+                <div class="arch-layer-icon">🧠</div>
+                <div class="arch-layer-content">
+                    <div class="arch-layer-title">分析层</div>
+                    <div class="arch-layer-desc">YOLOv8s (2类: 车辆+行人) 检测 · MobileNetV3-Small Re-ID 特征提取 · BoT-SORT 多目标跟踪</div>
+                </div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-layer">
+                <div class="arch-layer-icon">⚙️</div>
+                <div class="arch-layer-content">
+                    <div class="arch-layer-title">决策层</div>
+                    <div class="arch-layer-desc">强化学习(Q-learning) 动态优化交通策略</div>
+                </div>
+            </div>
+            <div class="arch-arrow">↓</div>
+            <div class="arch-layer">
+                <div class="arch-layer-icon">🤖</div>
+                <div class="arch-layer-content">
+                    <div class="arch-layer-title">执行层</div>
+                    <div class="arch-layer-desc">机器人替代人工指挥交通疏导</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 模型信息 + 实验对比 -->
+<div class="dual-column">
+    <div class="card">
+        <div class="card-header"><h2>📋 最优模型信息</h2></div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr><td>检测模型</td><td>YOLOv8s (2类, KITTI)</td></tr>
+                <tr><td>最优配置</td><td>2类Baseline 100ep</td></tr>
+                <tr><td>数据集</td><td>KITTI (车辆+行人)</td></tr>
+                <tr><td>输入尺寸</td><td>640 × 640</td></tr>
+                <tr><td>训练图片</td><td>{{ stats.train_images }} 张</td></tr>
+                <tr><td>验证图片</td><td>{{ stats.val_images }} 张</td></tr>
+                <tr><td>检测类别</td><td>{{ stats.class_names|join('、') }}</td></tr>
+                <tr><td>Re-ID模型</td><td>MobileNetV3-Small (683K参数)</td></tr>
+                <tr><td>跟踪算法</td><td>BoT-SORT + MobileNetV3 Re-ID</td></tr>
+                <tr><td>跟踪ID数</td><td>{{ stats.track_stats.track_ids }} 个</td></tr>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>📊 三组消融实验对比</h2></div>
+        <div class="card-body">
+            <canvas id="chart-exp" height="220"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- 核心技术创新点 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>💡 核心技术创新点</h2>
+    </div>
+    <div class="card-body">
+        <div class="innovation-grid">
+            <div class="innovation-item">
+                <div class="innovation-num">1</div>
+                <div>
+                    <h3>类别精简：8类→2类</h3>
+                    <p>将8类细粒度分类精简为2类（车辆+行人），消除相似类别混淆。mAP@0.5从90.3%提升至91.3%，Precision从91.9%提升至92.8%。</p>
+                </div>
+            </div>
+            <div class="innovation-item">
+                <div class="innovation-num">2</div>
+                <div>
+                    <h3>MobileNetV3-Small Re-ID</h3>
+                    <p>使用MobileNetV3-Small替代OSNet，引入SE通道注意力+H-Swish激活。仅683K参数，Re-ID推理74.5 FPS，适合边缘部署。</p>
+                </div>
+            </div>
+            <div class="innovation-item">
+                <div class="innovation-num">3</div>
+                <div>
+                    <h3>CBAM注意力对比实验</h3>
+                    <p>设计CBAM（通道+空间注意力）增强模型作为对照组，科学验证类别精简是最有效优化方向。</p>
+                </div>
+            </div>
+            <div class="innovation-item">
+                <div class="innovation-num">4</div>
+                <div>
+                    <h3>完整消融实验设计</h3>
+                    <p>三组对照实验（8类vs2类、原始vs CBAM、不同训练策略），通过控制变量法科学验证每个改进项的有效性。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 测试场景 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>🧪 测试场景与结果</h2>
+    </div>
+    <div class="card-body">
+        <div class="test-scenario-grid">
+            <div class="test-scenario-card">
+                <div class="test-scenario-header">
+                    <span class="test-scenario-icon">🛣️</span>
+                    <span class="test-scenario-title">正常道路</span>
+                </div>
+                <div class="test-scenario-desc">标准交通场景下的车辆与行人识别</div>
+                <div class="test-result">✓ 高识别率</div>
+            </div>
+            <div class="test-scenario-card">
+                <div class="test-scenario-header">
+                    <span class="test-scenario-icon">🚗</span>
+                    <span class="test-scenario-title">拥堵道路</span>
+                </div>
+                <div class="test-scenario-desc">密集车流场景下的多目标检测</div>
+                <div class="test-result">✓ 准确计数</div>
+            </div>
+            <div class="test-scenario-card">
+                <div class="test-scenario-header">
+                    <span class="test-scenario-icon">🚧</span>
+                    <span class="test-scenario-title">遮挡场景</span>
+                </div>
+                <div class="test-scenario-desc">车辆被部分遮挡时的识别能力</div>
+                <div class="test-result">✓ 保持高识别率</div>
+            </div>
+            <div class="test-scenario-card">
+                <div class="test-scenario-header">
+                    <span class="test-scenario-icon">💥</span>
+                    <span class="test-scenario-title">异常检测</span>
+                </div>
+                <div class="test-scenario-desc">两车相撞、车辆故障等异常事件</div>
+                <div class="test-result">✓ 快速识别上报</div>
+            </div>
+            <div class="test-scenario-card">
+                <div class="test-scenario-header">
+                    <span class="test-scenario-icon">📊</span>
+                    <span class="test-scenario-title">拥堵检测</span>
+                </div>
+                <div class="test-scenario-desc">通过车流变化分析判断拥堵区域</div>
+                <div class="test-result">✓ 准确判断</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统优势 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>⭐ 系统优势分析</h2>
+    </div>
+    <div class="card-body">
+        <div class="advantage-grid">
+            <div class="advantage-card">
+                <div class="advantage-icon">🎯</div>
+                <h3>更高识别准确率</h3>
+                <p>2类精简+最优训练策略，mAP50达91.3%</p>
+            </div>
+            <div class="advantage-card">
+                <div class="advantage-icon">⚡</div>
+                <h3>更快响应速度</h3>
+                <p>YOLOv8s检测48.6FPS，整体16.2FPS</p>
+            </div>
+            <div class="advantage-card">
+                <div class="advantage-icon">🔧</div>
+                <h3>更强适应能力</h3>
+                <p>多场景鲁棒，遮挡/拥堵均可用</p>
+            </div>
+            <div class="advantage-card">
+                <div class="advantage-icon">💰</div>
+                <h3>更低人工成本</h3>
+                <p>机器人替代人工指挥交通</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 检测效果预览 -->
+<div class="card full-width">
+    <div class="card-header">
+        <h2>🖼️ 检测效果预览</h2>
+        <a href="{{ url_for('detection') }}" class="btn-link">查看全部 →</a>
+    </div>
+    <div class="card-body">
+        <div class="preview-grid">
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch0_pred.jpg') }}" alt="预测结果1">
+                <span class="preview-label">验证集预测 Batch 0</span>
+            </div>
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch1_pred.jpg') }}" alt="预测结果2">
+                <span class="preview-label">验证集预测 Batch 1</span>
+            </div>
+            <div class="preview-item">
+                <img src="{{ url_for('runs_image', filename='val_batch2_pred.jpg') }}" alt="预测结果3">
+                <span class="preview-label">验证集预测 Batch 2</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const expData = {{ stats.exp_chart | tojson }};
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = 'rgba(99,102,241,0.1)';
+
+new Chart(document.getElementById('chart-exp').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: expData.map(e => e.name),
+        datasets: [
+            { label: 'mAP50', data: expData.map(e => e.mAP50), backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 6 },
+            { label: 'mAP50-95', data: expData.map(e => e.mAP50_95), backgroundColor: 'rgba(167,139,250,0.7)', borderRadius: 6 },
+            { label: 'Precision', data: expData.map(e => e.precision), backgroundColor: 'rgba(52,211,153,0.7)', borderRadius: 6 },
+            { label: 'Recall', data: expData.map(e => e.recall), backgroundColor: 'rgba(244,114,182,0.7)', borderRadius: 6 },
+        ]
+    },
+    options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+        plugins: { legend: { position: 'top' } }
+    }
+});
+</script>
+{% endblock %}
