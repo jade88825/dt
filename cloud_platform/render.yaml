@@ -6,12 +6,12 @@ services:
     region: singapore
     plan: free
     buildCommand: pip install -r cloud_platform/requirements-deploy.txt
-    startCommand: cd cloud_platform && python -m gunicorn app:app --timeout 120 --workers 1 --bind 0.0.0.0:$PORT
+    startCommand: bash start.sh
     healthCheckPath: /
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.6
+        value: "3.11.6"
       - key: FLASK_ENV
         value: production
       - key: RENDER
