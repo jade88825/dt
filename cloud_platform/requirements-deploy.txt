@@ -1,10 +1,6 @@
-# Render.com CPU部署依赖
-# 不指定torch版本, 让pip自动选择可用版本
-torch
-torchvision
-ultralytics>=8.4.0
-flask>=3.0.0
+flask
+gunicorn
+ultralytics
 opencv-python-headless
 numpy
-pillow
-gunicorn
+Pillow
