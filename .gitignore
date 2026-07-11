@@ -1,0 +1,30 @@
+*.zip
+*.rar
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+Thumbs.db
+
+# temp files
+.codely/
+.codely-cli/
+cloud_platform_v/
+website/
+boxmot_reid_patch/
+yolo26n.pt
+yolov8s.pt
+
+# dataset (too large)
+kitti/
+runs/
+dataset/
+src/

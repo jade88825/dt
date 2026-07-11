@@ -22,16 +22,30 @@ from flask import (
 from ultralytics import YOLO
 
 # ============================================================
-# 配置 - 使用最优2类模型
+# 配置 - 路径自适应 (本地Windows / Render Linux)
 # ============================================================
-BASE_DIR = Path(__file__).resolve().parent.parent  # F:\大唐
-RUNS_DIR = BASE_DIR / "runs"
-DETECT_DIR = RUNS_DIR / "detect"
-KITTI_IMAGES_DIR = BASE_DIR / "kitti" / "images" / "val"
+import platform
+import os
+
+IS_RENDER = os.environ.get("RENDER", False)
+
+if IS_RENDER:
+    # Render Linux 部署
+    BASE_DIR = Path(__file__).resolve().parent
+    RUNS_DIR = BASE_DIR / "runs"
+    DETECT_DIR = BASE_DIR / "runs" / "detect"
+    KITTI_IMAGES_DIR = BASE_DIR / "kitti" / "images" / "val"
+else:
+    # 本地 Windows
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    RUNS_DIR = BASE_DIR / "runs"
+    DETECT_DIR = RUNS_DIR / "detect"
+    KITTI_IMAGES_DIR = BASE_DIR / "kitti" / "images" / "val"
+
 UPLOAD_DIR = Path(__file__).resolve().parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# 最优模型: 2类Baseline (91.3% mAP50)
+# 最优模型
 BEST_RUN = "baseline_2cls-5"
 BEST_WEIGHTS = DETECT_DIR / BEST_RUN / "weights" / "best.pt"
 
