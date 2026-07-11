@@ -5,8 +5,8 @@ services:
     env: python
     region: singapore
     plan: free
-    buildCommand: pip install -r requirements-deploy.txt
-    startCommand: gunicorn app:app --timeout 120 --workers 1
+    buildCommand: pip install -r cloud_platform/requirements-deploy.txt
+    startCommand: cd cloud_platform && gunicorn app:app --timeout 120 --workers 1 --bind 0.0.0.0:$PORT
     healthCheckPath: /
     autoDeploy: true
     envVars:
@@ -14,3 +14,5 @@ services:
         value: 3.11.6
       - key: FLASK_ENV
         value: production
+      - key: RENDER
+        value: "true"
